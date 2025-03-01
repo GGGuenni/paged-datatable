@@ -162,7 +162,7 @@ final class _PagedDataTableState<K extends Comparable<K>, T>
     } else {
       tableController = widget.controller!;
     }
-    tableController._init(
+    tableController.init(
       columns: widget.columns,
       pageSizes: widget.pageSizes,
       initialPageSize: widget.initialPageSize,
@@ -179,7 +179,7 @@ final class _PagedDataTableState<K extends Comparable<K>, T>
     if (oldWidget.columns.length !=
         widget.columns
             .length /*!listEquals(oldWidget.columns, widget.columns)*/) {
-      tableController._reset(columns: widget.columns);
+      tableController.reset(columns: widget.columns);
       debugPrint("PagedDataTable<$T> changed and rebuilt.");
     }
   }

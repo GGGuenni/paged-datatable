@@ -60,8 +60,8 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   };
   PagedDataTableConfiguration? _configuration;
 
-  Object?
-      _currentError; // If something went wrong when fetching items, this is the latest error
+  // If something went wrong when fetching items, this is the latest error
+  (Object, StackTrace)? _currentError;
   int _totalItems = 0; // the total items in the current dataset
   int _currentPageSize = 0;
   int _currentPageIndex =
@@ -105,6 +105,17 @@ final class PagedDataTableController<K extends Comparable<K>, T>
 
   /// A list with all the rows that can be expanded.
   List<int> get expansibleRows => UnmodifiableListView(_expansibleRows.keys);
+
+  /// The current state of the table
+  List<T> get currentDataset => UnmodifiableListView(_currentDataset);
+
+  bool get isFetching => _state == _TableState.fetching;
+
+  bool get hasError => _state == _TableState.error;
+
+  Object? get error => _currentError?.$1;
+
+  StackTrace? get stackTrace => _currentError?.$2;
 
   /// Updates the sort model and refreshes the dataset
   set sortModel(SortModel? sortModel) {
@@ -160,7 +171,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
       buf.writeln("TableController<$T>(");
       buf.writeln("   CurrentPageIndex($_currentPageIndex),");
       buf.writeln("   PaginationKeys(${_paginationKeys.values.join(", ")}),");
-      buf.writeln("   Error($_currentError)");
+      buf.writeln("   Error(${_currentError?.$1})");
       buf.writeln("   CurrentPageSize($_currentPageSize)");
       buf.writeln("   TotalItems($_totalItems)");
       buf.writeln("   State($_state)");
@@ -460,7 +471,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   }
 
   /// Initializes the controller filling up properties
-  void _init({
+  void init({
     required List<ReadOnlyTableColumn> columns,
     required List<int>? pageSizes,
     required int initialPageSize,
@@ -492,7 +503,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
     Future.microtask(_fetch);
   }
 
-  void _reset({required List<ReadOnlyTableColumn> columns}) {
+  void reset({required List<ReadOnlyTableColumn> columns}) {
     assert(columns.isNotEmpty, "columns cannot be empty.");
 
     // Schedule a fetch
@@ -595,7 +606,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
       debugPrint("An error occurred trying to fetch a page: $err");
       debugPrint(stack.toString());
       _state = _TableState.error;
-      _currentError = err;
+      _currentError = (err, stack);
       _totalItems = 0;
       _currentDataset.clear();
       notifyListeners();
