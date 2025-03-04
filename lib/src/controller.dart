@@ -32,6 +32,12 @@ typedef ExpansibleFetcher<K extends Comparable<K>, T>
 typedef RowChangeListener<K extends Comparable<K>, T> = void Function(
     int index, T item);
 
+/// A callback that fires when the sorting model changes
+typedef SortChangeListener = void Function(SortModel? sortModel);
+
+/// A callback that fires when the filter model changes
+typedef FiltersChangeListener = void Function(FilterModel filterModel);
+
 /// [PagedDataTableController] represents the state of a [PagedDataTable] of type [T], using pagination keys of type [K].
 ///
 /// Is recommended that [T] specifies a custom hashCode and equals method for comparison reasons.
@@ -57,6 +63,10 @@ final class PagedDataTableController<K extends Comparable<K>, T>
 
     // Callbacks for row change. The key of the map is the row index, the value the list of listeners for the row
     _ListenerType.rowChange: <int, List<RowChangeListener<K, T>>>{},
+    // Callbacks for sort changes.
+    _ListenerType.sortChange: <SortChangeListener>[],
+    // Callbacks for filters changes.
+    _ListenerType.filtersChange: <FiltersChangeListener>[],
   };
   PagedDataTableConfiguration? _configuration;
 
@@ -93,6 +103,11 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   /// The current sort model of the table
   SortModel? get sortModel => _currentSortModel;
 
+  /// The current filter model of the table
+  FilterModel get filterModel => FilterModel._(
+        _filtersState.map((key, value) => MapEntry(key, value.value)),
+      );
+
   /// The list of selected row indexes
   List<int> get selectedRows => _selectedRows.toList(growable: false);
 
@@ -118,10 +133,13 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   StackTrace? get stackTrace => _currentError?.$2;
 
   /// Updates the sort model and refreshes the dataset
+  ///
+  /// !: Resets the current page to 0
   set sortModel(SortModel? sortModel) {
     _currentSortModel = sortModel;
     refresh(fromStart: true);
     notifyListeners();
+    _notifySortChangeListeners();
   }
 
   /// Swipes the current sort model or sets it to [columnId].
@@ -129,7 +147,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   /// If the sort model was ascending, it gets changed to descending, and finally it gets changed to null.
   void swipeSortModel([String? columnId]) {
     if (columnId != null && _currentSortModel?.fieldName != columnId) {
-      sortModel = SortModel._(fieldName: columnId, descending: false);
+      sortModel = SortModel(fieldName: columnId, descending: false);
       return;
     }
 
@@ -139,9 +157,10 @@ final class PagedDataTableController<K extends Comparable<K>, T>
     if (_currentSortModel!.descending) {
       sortModel = null;
     } else {
-      sortModel = SortModel._(
-          fieldName: _currentSortModel!.fieldName, descending: true);
+      sortModel =
+          SortModel(fieldName: _currentSortModel!.fieldName, descending: true);
     }
+    _notifySortChangeListeners();
   }
 
   /// Advances to the next page
@@ -388,6 +407,46 @@ final class PagedDataTableController<K extends Comparable<K>, T>
     if (toRemove != null) listenersForIndex.removeAt(toRemove);
   }
 
+  /// Registers a callback that gets called when the sort model changes
+  void addSortChangeListener(SortChangeListener onSortChange) {
+    (_listeners[_ListenerType.sortChange] as List<SortChangeListener>)
+        .add(onSortChange);
+  }
+
+  /// Unregisters a sort change callback
+  void removeSortChangeListener(SortChangeListener onSortChange) {
+    (_listeners[_ListenerType.sortChange] as List<SortChangeListener>)
+        .remove(onSortChange);
+  }
+
+  /// Notifies all registered SortChangeListener
+  void _notifySortChangeListeners() {
+    for (final listener
+        in _listeners[_ListenerType.sortChange] as List<SortChangeListener>) {
+      listener(sortModel);
+    }
+  }
+
+  /// Registers a callback that gets called when the filter model changes
+  void addFilterChangeListener(FiltersChangeListener onFiltersChange) {
+    (_listeners[_ListenerType.filtersChange] as List<FiltersChangeListener>)
+        .add(onFiltersChange);
+  }
+
+  /// Unregisters a filter change callback
+  void removeFilterChangeListener(FiltersChangeListener onFiltersChange) {
+    (_listeners[_ListenerType.filtersChange] as List<FiltersChangeListener>)
+        .remove(onFiltersChange);
+  }
+
+  /// Notifies all registered FiltersChangeListener
+  void _notifyFilterChangeListeners() {
+    for (final listener in _listeners[_ListenerType.filtersChange]
+        as List<FiltersChangeListener>) {
+      listener(filterModel);
+    }
+  }
+
   /// Removes a filter, changing its value to null.
   void removeFilter(String filterId) {
     final filter = _filtersState[filterId];
@@ -397,6 +456,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
 
     filter.value = null;
     notifyListeners();
+    _notifyFilterChangeListeners();
     _fetch();
   }
 
@@ -406,6 +466,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
       value.value = null;
     });
     notifyListeners();
+    _notifyFilterChangeListeners();
     _fetch();
   }
 
@@ -413,6 +474,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   void applyFilters() {
     if (_filtersState.values.any((element) => element.value != null)) {
       notifyListeners();
+      _notifyFilterChangeListeners();
       _fetch();
     }
   }
@@ -426,6 +488,20 @@ final class PagedDataTableController<K extends Comparable<K>, T>
     }
 
     filterState.value = value;
+    applyFilters();
+  }
+
+  /// Sets filter [filterId]'s value.
+  void setFilters(Map<String, dynamic> filters) {
+    for (final entry in filters.entries) {
+      final filterState = _filtersState[entry.key];
+      if (filterState == null) {
+        throw ArgumentError(
+            "Filter with id ${entry.key} does not exist.", "filterId");
+      }
+
+      filterState.value = entry.value;
+    }
     applyFilters();
   }
 
@@ -527,8 +603,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
 
     try {
       final pageToken = _paginationKeys[page];
-      final filterModel = FilterModel._(
-          _filtersState.map((key, value) => MapEntry(key, value.value)));
+      final filterModel = this.filterModel;
 
       K? nextPageToken;
       int totalNewItems;
@@ -622,4 +697,6 @@ enum _TableState {
 
 enum _ListenerType {
   rowChange,
+  sortChange,
+  filtersChange,
 }

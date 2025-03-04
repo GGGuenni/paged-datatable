@@ -5,7 +5,7 @@ final class SortModel {
   final String fieldName;
   final bool descending;
 
-  const SortModel._({required this.fieldName, required this.descending});
+  const SortModel({required this.fieldName, required this.descending});
 
   @override
   int get hashCode => Object.hash(fieldName, descending);
