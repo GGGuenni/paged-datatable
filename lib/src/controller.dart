@@ -80,6 +80,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
       false; // a flag that indicates if there are more pages after the current one
   SortModel? _currentSortModel; // The current sort model of the table
   _TableState _state = _TableState.idle;
+  bool _isDisposed = false;
 
   /// A flag that indicates if the dataaset has a next page
   bool get hasNextPage => _hasNextPage;
@@ -97,7 +98,9 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   set pageSize(int pageSize) {
     _currentPageSize = pageSize;
     refresh(fromStart: true);
-    notifyListeners();
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
 
   /// The current sort model of the table
@@ -136,10 +139,20 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   ///
   /// !: Resets the current page to 0
   set sortModel(SortModel? sortModel) {
+    if (_isDisposed) {
+      return;
+    }
+
     _currentSortModel = sortModel;
     refresh(fromStart: true);
     notifyListeners();
     _notifySortChangeListeners();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
   }
 
   /// Swipes the current sort model or sets it to [columnId].
@@ -421,6 +434,10 @@ final class PagedDataTableController<K extends Comparable<K>, T>
 
   /// Notifies all registered SortChangeListener
   void _notifySortChangeListeners() {
+    if (_isDisposed) {
+      return;
+    }
+
     for (final listener
         in _listeners[_ListenerType.sortChange] as List<SortChangeListener>) {
       listener(sortModel);
@@ -441,6 +458,10 @@ final class PagedDataTableController<K extends Comparable<K>, T>
 
   /// Notifies all registered FiltersChangeListener
   void _notifyFilterChangeListeners() {
+    if (_isDisposed) {
+      return;
+    }
+
     for (final listener in _listeners[_ListenerType.filtersChange]
         as List<FiltersChangeListener>) {
       listener(filterModel);
@@ -449,6 +470,10 @@ final class PagedDataTableController<K extends Comparable<K>, T>
 
   /// Removes a filter, changing its value to null.
   void removeFilter(String filterId) {
+    if (_isDisposed) {
+      return;
+    }
+
     final filter = _filtersState[filterId];
     if (filter == null) {
       throw ArgumentError("Filter with id $filterId not found.");
@@ -462,6 +487,10 @@ final class PagedDataTableController<K extends Comparable<K>, T>
 
   /// Removes all the set filters, changing their values to null.
   void removeFilters() {
+    if (_isDisposed) {
+      return;
+    }
+
     _filtersState.forEach((key, value) {
       value.value = null;
     });
@@ -472,6 +501,10 @@ final class PagedDataTableController<K extends Comparable<K>, T>
 
   /// Applies the current set filters
   void applyFilters() {
+    if (_isDisposed) {
+      return;
+    }
+
     if (_filtersState.values.any((element) => element.value != null)) {
       notifyListeners();
       _notifyFilterChangeListeners();
@@ -507,6 +540,10 @@ final class PagedDataTableController<K extends Comparable<K>, T>
 
   /// This method automatically calls notifyListeners too.
   void _notifyOnRowChanged(int rowIndex) {
+    if (_isDisposed) {
+      return;
+    }
+
     final rowChangeListeners = (_listeners[_ListenerType.rowChange]
         as Map<int, List<RowChangeListener<K, T>>>);
     final listeners = rowChangeListeners[rowIndex];
@@ -528,6 +565,10 @@ final class PagedDataTableController<K extends Comparable<K>, T>
 
   /// This method automatically calls notifyListeners too.
   void _notifyRowChangedMany(Iterable<int> indexes) {
+    if (_isDisposed) {
+      return;
+    }
+
     final listeners = (_listeners[_ListenerType.rowChange]
         as Map<int, List<RowChangeListener<K, T>>>);
     for (final index in indexes) {
@@ -599,6 +640,11 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   Future<void> _fetch({int page = 0, bool clearExpandedRows = true}) async {
     _state = _TableState.fetching;
     _selectedRows.clear();
+
+    if (_isDisposed) {
+      return;
+    }
+
     notifyListeners();
 
     try {
@@ -676,7 +722,10 @@ final class PagedDataTableController<K extends Comparable<K>, T>
       _totalItems = totalNewItems;
       _state = _TableState.idle;
       _currentError = null;
-      notifyListeners();
+
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     } catch (err, stack) {
       debugPrint("An error occurred trying to fetch a page: $err");
       debugPrint(stack.toString());
@@ -684,7 +733,10 @@ final class PagedDataTableController<K extends Comparable<K>, T>
       _currentError = (err, stack);
       _totalItems = 0;
       _currentDataset.clear();
-      notifyListeners();
+
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     }
   }
 }
