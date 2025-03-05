@@ -176,7 +176,25 @@ final class _PagedDataTableState<K extends Comparable<K>, T>
   void didUpdateWidget(covariant PagedDataTable<K, T> oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.columns.length !=
+    if (oldWidget.controller != widget.controller) {
+      if (selfConstructedController) {
+        tableController.dispose();
+      }
+      if (widget.controller == null) {
+        selfConstructedController = true;
+        tableController = PagedDataTableController();
+      } else {
+        tableController = widget.controller!;
+      }
+      tableController.init(
+        columns: widget.columns,
+        pageSizes: widget.pageSizes,
+        initialPageSize: widget.initialPageSize,
+        fetcher: widget.fetcher,
+        config: widget.configuration,
+        filters: widget.filters,
+      );
+    } else if (oldWidget.columns.length !=
         widget.columns
             .length /*!listEquals(oldWidget.columns, widget.columns)*/) {
       tableController.reset(columns: widget.columns);

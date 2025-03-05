@@ -107,7 +107,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   SortModel? get sortModel => _currentSortModel;
 
   /// The current filter model of the table
-  FilterModel get filterModel => FilterModel._(
+  FilterModel get filterModel => FilterModel(
         _filtersState.map((key, value) => MapEntry(key, value.value)),
       );
 
@@ -153,6 +153,33 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   void dispose() {
     _isDisposed = true;
     super.dispose();
+  }
+
+  @override
+  void addListener(VoidCallback listener) {
+    if (_isDisposed) {
+      return;
+    }
+
+    super.addListener(listener);
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    if (_isDisposed) {
+      return;
+    }
+
+    super.removeListener(listener);
+  }
+
+  @override
+  void notifyListeners() {
+    if (_isDisposed) {
+      return;
+    }
+
+    super.notifyListeners();
   }
 
   /// Swipes the current sort model or sets it to [columnId].
@@ -722,10 +749,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
       _totalItems = totalNewItems;
       _state = _TableState.idle;
       _currentError = null;
-
-      if (!_isDisposed) {
-        notifyListeners();
-      }
+      notifyListeners();
     } catch (err, stack) {
       debugPrint("An error occurred trying to fetch a page: $err");
       debugPrint(stack.toString());
@@ -733,10 +757,7 @@ final class PagedDataTableController<K extends Comparable<K>, T>
       _currentError = (err, stack);
       _totalItems = 0;
       _currentDataset.clear();
-
-      if (!_isDisposed) {
-        notifyListeners();
-      }
+      notifyListeners();
     }
   }
 }

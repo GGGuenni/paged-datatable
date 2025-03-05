@@ -16,7 +16,7 @@ part of 'paged_datatable.dart';
 final class FilterModel extends UnmodifiableMapBase<String, dynamic> {
   final Map<String, dynamic> _inner;
 
-  FilterModel._(this._inner);
+  FilterModel(this._inner);
 
   @override
   operator [](Object? key) => _inner[key];
