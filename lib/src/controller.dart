@@ -540,6 +540,8 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   }
 
   /// Sets filter [filterId]'s value.
+  ///
+  /// Throws an error if the filter id does not exist.
   void setFilter(String filterId, dynamic value) {
     final filterState = _filtersState[filterId];
     if (filterState == null) {
@@ -552,17 +554,22 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   }
 
   /// Sets filter [filterId]'s value.
-  void setFilters(Map<String, dynamic> filters) {
+  ///
+  /// Returns a list of filters that could not be set because of
+  /// an invalid filter id. If everything is fine, the list will be empty.
+  List<String> setFilters(Map<String, dynamic> filters) {
+    final List<String> errors = [];
     for (final entry in filters.entries) {
       final filterState = _filtersState[entry.key];
       if (filterState == null) {
-        throw ArgumentError(
-            "Filter with id ${entry.key} does not exist.", "filterId");
+        errors.add(entry.key);
+        continue;
       }
 
       filterState.value = entry.value;
     }
     applyFilters();
+    return errors;
   }
 
   /// This method automatically calls notifyListeners too.
