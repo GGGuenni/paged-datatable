@@ -532,11 +532,9 @@ final class PagedDataTableController<K extends Comparable<K>, T>
       return;
     }
 
-    if (_filtersState.values.any((element) => element.value != null)) {
-      notifyListeners();
-      _notifyFilterChangeListeners();
-      _fetch();
-    }
+    notifyListeners();
+    _notifyFilterChangeListeners();
+    _fetch();
   }
 
   /// Sets filter [filterId]'s value.
