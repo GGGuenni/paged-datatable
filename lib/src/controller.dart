@@ -54,10 +54,6 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   final Map<int, List<T>> _expansibleRows =
       {}; // Links the index of a expansible rows with their (initially) collapsed entries
   final GlobalKey<FormState> _filtersFormKey = GlobalKey();
-  late final List<int>? _pageSizes;
-  late final Fetcher<K, T>? _fetcher; // The function used to fetch items
-  late final ExpansibleFetcher<K, T>?
-      _expansibleFetcher; // The function used to fetch items when type is expansible
   final Map<_ListenerType, dynamic> _listeners = {
     // The list of special listeners which all are functions
 
@@ -70,6 +66,10 @@ final class PagedDataTableController<K extends Comparable<K>, T>
   };
   PagedDataTableConfiguration? _configuration;
 
+  List<int>? _pageSizes;
+  Fetcher<K, T>? _fetcher; // The function used to fetch items
+  ExpansibleFetcher<K, T>?
+      _expansibleFetcher; // The function used to fetch items when type is expansible
   // If something went wrong when fetching items, this is the latest error
   (Object, StackTrace)? _currentError;
   int _totalItems = 0; // the total items in the current dataset
@@ -102,6 +102,8 @@ final class PagedDataTableController<K extends Comparable<K>, T>
       notifyListeners();
     }
   }
+
+  bool get isInitialized => _configuration != null;
 
   /// The current sort model of the table
   SortModel? get sortModel => _currentSortModel;
